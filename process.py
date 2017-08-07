@@ -106,8 +106,17 @@ class ControlBlock:
     def decrease_quantum(self):
         self.quantum -= 1
 
+    def calculate_dynamic(self):
+        if self.quantum == 0:
+            return 0
+
+        return self.priority/self.quantum
+
     def init(self):
         self.process.begin()
+
+    def preempt(self):
+        self.process.preempt()
 
     def reset(self):
         self.priority = self.default_priority
@@ -132,6 +141,7 @@ class ProcessManager:
         self.pbuffer = []
         self.ibuffer = []
 
+        self.time = 0
         self.pid_count = 0
 
     def generate_pid(self):
@@ -146,7 +156,28 @@ class ProcessManager:
 
         self.pbuffer.append(c)
 
-# Data Structure functions (CHANGE THIS) -----------------------------------------------------------
+# Interface Helper Function ------------------------------------------------------------------------
+
+    def get_processes(self):
+        processes = []
+
+        if self.pslot:
+            processes.append(self.pslot)
+
+        if self.islot:
+            processes.append(self.islot)
+
+        if self.pbuffer:
+            for cb in self.pbuffer:
+                processes.append(cb)
+
+        if self.ibuffer:
+            for cb in self.ibuffer:
+                processes.append(cb)
+
+        return processes
+
+# Data Structure Functions (CHANGE THIS) -----------------------------------------------------------
 
     def pop_first_process(self):
         if self.pbuffer:
@@ -164,6 +195,23 @@ class ProcessManager:
             return next
         return self.islot
 
+    def get_highest_priority(self):
+        if not self.pbuffer:
+            return False
+
+        mx = max(self.pbuffer, key=lambda x: x.priority)
+
+        return mx
+
+    def get_highest_dynamic(self):
+        if not self.pbuffer:
+            return False
+
+        mx = max(self.pbuffer, 
+                key=lambda x: x.calculate_dynamic())
+
+        return mx
+
 #---------------------------------------------------------------------------------------------------
 # They have to analyze if the pslot will change at all, so they can return the same pslot
 
@@ -180,13 +228,52 @@ class ProcessManager:
         return self.pop_first_process()             # Not processing, get next
 
     def round_robin_priority(self):
-        pass
+        print('ROUND ROBIN (PRIORITY)')
+
+        if self.pslot:
+            self.pslot.decrease_quantum()
+
+            if self.pslot.quantum == 0:
+                print('QUANTUM CHANGE')
+                return self.get_highest_priority()
+            return self.pslot                       
+        return self.get_highest_priority()
 
     def priority(self):
-        pass
+        print('PRIORITY')
+
+        mx = self.get_highest_priority()
+        if self.pslot and mx:
+            if mx.priority > self.pslot.priority:
+                self.pbuffer.remove(mx)
+                return mx 
+
+            self.pslot.decrease_priority()
+            return self.pslot
+
+        if not self.pslot and mx:
+            self.pbuffer.remove(mx)
+            return mx
+
+        return self.pslot
 
     def dynamic_priority(self):
-        pass
+        print('DYNAMIC PRIORITY')
+
+        mx = self.get_highest_dynamic()
+        if self.pslot and mx:
+            if mx.calculate_dynamic() > self.pslot.calculate_dynamic():
+                self.pbuffer.remove(mx)
+                return mx 
+
+            self.pslot.decrease_quantum()
+            return self.pslot
+
+        if not self.pslot and mx:
+            self.pbuffer.remove(mx)
+            return mx
+
+        return self.pslot
 
     def lottery(self):
         pass
@@ -200,9 +287,17 @@ class ProcessManager:
                 'LOTTERY'                   : self.lottery
                 }[self.scheduling_type]
 
-        self.pslot = sched()
-        
-        if self.pslot:
+        next = sched()
+        if not next: 
+            self.pslot = next
+            return
+
+        if next != self.pslot:
+            if self.pslot:
+                self.pslot.preempt()
+                self.pbuffer.append(self.pslot)
+
+            self.pslot = next
             self.pslot.init()
 
     def io_set(self):
@@ -238,6 +333,8 @@ class ProcessManager:
             self.islot = False
 
     def update(self):
+        self.time += 1
+
         # Update the main processes
         if self.pslot:
             # Update pslot

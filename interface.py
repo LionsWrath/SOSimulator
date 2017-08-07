@@ -1,8 +1,11 @@
 from tkinter import *
 from tkinter.ttk import *
+import process as p
 
 class ProcessManagement:
-    def __init__(self, master):
+    def __init__(self, master, manager):
+        self.manager = manager
+        
         self.style = Style()
         self.style.theme_use('alt')
         self.master = master
@@ -18,8 +21,9 @@ class ProcessManagement:
         self.rframe.pack(side=RIGHT)
 
         # Console SOSim
-        self.time = Label(master, text="Tempo: 0")
-        self.time.pack(in_=self.tframe)
+        self.time = StringVar()
+        self.time_label = Label(master, textvariable= self.time)
+        self.time_label.pack(in_=self.tframe)
 
         # Table
         self.table = Treeview(master, columns=['PID', 'Priority', 'State'])
@@ -54,10 +58,27 @@ class ProcessManagement:
 
     # Control routines
     def create_window(self):
-        window = AddWindow(self.master)
+        window = AddWindow(self.master, self)
 
-    def create_process(self):
-        pass
+    def clear_table(self):
+        self.table.delete(*self.table.get_children())
+
+    def add_to_table(self, control):
+        if control.process.state == p.READY:
+            state = 'READY'
+        if control.process.state == p.EXECUTING:
+            state = 'EXECUTING'
+        if control.process.state == p.BLOCKED:
+            state = 'BLOCKED'
+
+        self.table.insert("", control.PID, text=str(control.PID), 
+                values=(
+                    control.priority,
+                    state,
+                    5)) 
+
+    def create_process(self, priority, quantum, type):
+        self.manager.add_process(type, priority, quantum)
 
     def delete_process(self):
         pass
@@ -72,14 +93,24 @@ class ProcessManagement:
         pass
 
     # Update Routines
-    def updateConsole(self):
-        pass
+    def update_console(self):
+        self.time.set('Tempo: ' + str(self.manager.time))
 
-    def updateAll(self):
-        self.master.after(1000, self.update)
+    def update_table(self):
+        self.clear_table()
+        ps = self.manager.get_processes()
+
+        for cb in ps:
+            self.add_to_table(cb)
+
+    def update_all(self):
+        self.manager.update()
+        self.update_console()
+        self.update_table()
+        self.master.after(1000, self.update_all)
 
 class AddWindow(Toplevel):
-    def __init__(self, master):
+    def __init__(self, master, window):
         Toplevel.__init__(self, master)
         self.title("Create Process")
 
@@ -87,9 +118,11 @@ class AddWindow(Toplevel):
         self.master.withdraw()
         self.bind("<Destroy>", self.on_destroy)
 
+        self.window = window
+
         # Number of Processes
         self.number_label = Label(self, text="Number of Processes")
-        self.number_spin = Spinbox(self, from_=0, to_=10)
+        self.number_spin = Spinbox(self, from_=1, to_=10)
 
         self.number_label.pack()
         self.number_spin.pack()
@@ -98,12 +131,21 @@ class AddWindow(Toplevel):
 
         # Priority
         self.priority_label = Label(self, text="Priority")
-        self.priority_spin = Spinbox(self, from_=0, to_=10)
+        self.priority_spin = Spinbox(self, from_=1, to_=10)
 
         self.priority_label.pack()
         self.priority_spin.pack()
         self.priority_label.grid(row=1, column=0, sticky=W)
         self.priority_spin.grid(row=1, column=1, sticky=W)
+
+        # Quantum
+        self.quantum_label = Label(self, text="Quantum")
+        self.quantum_spin = Spinbox(self, from_=1, to_=10)
+
+        self.quantum_label.pack()
+        self.quantum_spin.pack()
+        self.quantum_label.grid(row=2, column=0, sticky=W)
+        self.quantum_spin.grid(row=2, column=1, sticky=W)
 
         # Type of Process
         self.choices = ['CPU BOUND', 'IO BOUND', 'CPU&IO BOUND']
@@ -113,28 +155,39 @@ class AddWindow(Toplevel):
 
         self.type_label.pack()
         self.type_option.pack()
-        self.type_label.grid(row=2, column=0, sticky=W)
-        self.type_option.grid(row=2, column=1, sticky=W)
+        self.type_label.grid(row=3, column=0, sticky=W)
+        self.type_option.grid(row=3, column=1, sticky=W)
 
         # Buttons
         self.ok_button = Button(self, text="Ok", command=self.applyWindow)
         self.ok_button.pack()
-        self.ok_button.grid(row=3, column=1, sticky=E)
+        self.ok_button.grid(row=4, column=1, sticky=E)
 
         self.close_button = Button(self, text="Close", command=self.destroy)
         self.close_button.pack()
-        self.close_button.grid(row=3, column=2, sticky=E)
+        self.close_button.grid(row=4, column=2, sticky=E)
         
         for child in self.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
 
     def applyWindow(self):
+        n_processes     = int(self.number_spin.get())
+        priority        = int(self.priority_spin.get())
+        quantum         = int(self.quantum_spin.get())
+
+        for i in range(n_processes):
+            self.window.create_process(priority,
+                    quantum,
+                    self.type.get())
+
         self.destroy()
 
     def on_destroy(self, event):
         if event.widget == self:
             self.master.deiconify()
 
+m = p.ProcessManager(15, 'DYNAMIC PRIORITY')
 root = Tk()
-my_gui = ProcessManagement(root)
+my_gui = ProcessManagement(root, m)
+my_gui.update_all()
 root.mainloop()
