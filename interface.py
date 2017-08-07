@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import messagebox
+from table import SimpleTable
 import process as p
 
 class ProcessManagement:
@@ -25,6 +26,8 @@ class ProcessManagement:
         self.time = StringVar()
         self.time_label = Label(master, textvariable= self.time)
         self.time_label.pack(in_=self.tframe)
+
+        self.memory = VirtualMemory(self.master)
 
         # Table
         self.table = Treeview(master, columns=['PID', 
@@ -101,6 +104,8 @@ class ProcessManagement:
         self.table.insert("", control.PID, text=str(control.PID), 
                 values=(
                     control.priority,
+                    control.quantum,
+                    control.tickets,
                     'SUSPENDED',
                     control.process.type,
                     5)) 
@@ -161,7 +166,26 @@ class ProcessManagement:
         self.manager.update()
         self.update_console()
         self.update_table()
+        self.memory.update(self.manager.mem.mem)
         self.master.after(1000, self.update_all)
+
+class VirtualMemory(Toplevel):
+    def __init__(self, master):
+        Toplevel.__init__(self, master)
+        self.title("Virtual Memory")
+
+        self.memory = SimpleTable(self)
+        self.memory.pack(side=TOP, fill=X)
+
+    def update(self, mem):
+        for i,val in enumerate(mem):
+            idx_x = int(i / 10)
+            idx_y = int(i % 10)
+
+            if val == None:
+                self.memory.set(idx_x, idx_y, "-")
+            else:
+                self.memory.set(idx_x, idx_y, str(val.PID))
 
 class AddWindow(Toplevel):
     def __init__(self, master, window):
