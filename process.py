@@ -16,6 +16,8 @@ class Process:
         self.pwait = 0
         self.iwait = 0
 
+        self.mem_pos = -1
+
     def get_status(self):
         return self.state
 
@@ -184,18 +186,27 @@ class ProcessManager:
 
     def remove_process(self, PID):
         if self.pslot and self.pslot.PID == PID:
+            deleted_process = self.pslot
             self.pslot = False
 
         if self.islot and self.islot.PID == PID:
+            deleted_process = self.islot
             self.islot = False
 
         for cb in self.pbuffer:
             if cb.PID == PID:
+                deleted_process = cb
                 self.pbuffer.remove(cb)
 
         for cb in self.ibuffer:
             if cb.PID == PID:
+                deleted_process = cb
                 self.ibuffer.remove(cb)
+
+        for i in range(deleted_process.mem_pos, deleted_process.mem_pos + 5):
+            self.mem.free_mem(i)
+
+        self.free_pos.append(deleted_process.mem_pos)
 
     def suspend_process(self, PID):
         if self.pslot:

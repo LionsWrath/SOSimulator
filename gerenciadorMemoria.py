@@ -13,7 +13,7 @@ class GerenciadorMemoriaVirtual:
         self.mem = [None] * 100
 
     def susbtitute(self, rankNew, PID):
-        substituido = min(filter(lambda x: x.presente, self.frames), key=lambda x: x.age)
+        substituido = max(filter(lambda x: x.presente, self.frames), key=lambda x: x.age)
         substituido.presente = False
 
         self.frames[rankNew].presente = True
@@ -24,7 +24,7 @@ class GerenciadorMemoriaVirtual:
         self.mem[self.frames[rankNew].memPos] = self.frames[rankNew]
 
     def requestMem(self, PID, rank):
-        if (not self.frames[rank].presente):
+        if (rank > 0 and not self.frames[rank].presente):
             print("PAGE FAULT")
             i = 0
 
@@ -39,6 +39,12 @@ class GerenciadorMemoriaVirtual:
                 self.mem[i].presente = True
             else:
                 self.susbtitute(rankNew, process.PID)
+
+    def free_mem(self, rank):
+        if (self.frames[rank].presente):
+            self.mem[self.frames[rank].memPos] = None
+
+        self.frames[rank].presente = False
 
     def update(self):
         for frame in filter(lambda x: x.presente, self.frames):
