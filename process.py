@@ -143,7 +143,7 @@ class ControlBlock:
 
         self.process.update()
 
-        self.mem_translate_pos = self.mem_pos * self.process.mem_pos
+        self.mem_translate_pos = self.mem_pos * 5 + self.process.mem_pos
 
 class ProcessManager:
 
@@ -203,7 +203,7 @@ class ProcessManager:
                 deleted_process = cb
                 self.ibuffer.remove(cb)
 
-        for i in range(deleted_process.mem_pos, deleted_process.mem_pos + 5):
+        for i in range(deleted_process.mem_pos * 5, deleted_process.mem_pos * 5 + 5):
             self.mem.free_mem(i)
 
         self.free_pos.append(deleted_process.mem_pos)
