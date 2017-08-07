@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter.ttk import *
 from tkinter import messagebox
+from table import SimpleTable
 import process as p
 
 class ProcessManagement:
@@ -20,6 +21,8 @@ class ProcessManagement:
 
         self.rframe = Frame(master)
         self.rframe.pack(side=RIGHT)
+
+        self.memory = VirtualMemory(self.master) 
 
         # Console SOSim
         self.time = StringVar()
@@ -101,6 +104,8 @@ class ProcessManagement:
         self.table.insert("", control.PID, text=str(control.PID), 
                 values=(
                     control.priority,
+                    control.quantum,
+                    control.tickets,
                     'SUSPENDED',
                     control.process.type,
                     5)) 
@@ -162,6 +167,17 @@ class ProcessManagement:
         self.update_console()
         self.update_table()
         self.master.after(1000, self.update_all)
+
+class VirtualMemory(Toplevel):
+    def __init__(self, master):
+        Toplevel.__init__(self, master)
+        self.title("Virtual Memory")
+
+        self.memory = SimpleTable(self)
+        self.memory.pack(side=TOP, fill=X)
+
+    def update(self):
+        pass
 
 class AddWindow(Toplevel):
     def __init__(self, master, window):
