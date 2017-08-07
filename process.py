@@ -178,7 +178,7 @@ class ProcessManager:
             self.last_mem += 1
 
         p = Process(type)
-        c = ControlBlock(p, PID, priority, quantum, tickets, mem_pos)
+        c = ControlBlock(p, PID, priority, quantum, tickets, mem)
 
         self.pbuffer.append(c)
 
@@ -429,6 +429,9 @@ class ProcessManager:
             self.pbuffer.append(self.pslot)
             self.pslot = False
 
+        if s == EXECUTING:
+            self.mem.requestMem(self.pslot.PID, self.pslot.mem_translate_pos)
+
     def resolve_blocked(self):
         s = self.islot.get_status()
 
@@ -437,8 +440,8 @@ class ProcessManager:
             self.islot = False
 
     def update(self):
-        self.time += 1
 
+        self.time += 1
         # Update the main processes
         if self.pslot:
             # Update pslot
@@ -446,7 +449,6 @@ class ProcessManager:
             self.pslot.update()
             self.resolve_executing()
 
-            self.mem.requestMem(self.pslot.processs, self.pslot.mem_translate_pos)
 
         if self.islot:
             # Update pslot

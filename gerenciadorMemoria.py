@@ -23,7 +23,7 @@ class GerenciadorMemoriaVirtual:
 
         self.mem[self.frames[rankNew].memPos] = self.frames[rankNew]
 
-    def requestMem(self, processs, rank):
+    def requestMem(self, PID, rank):
         if (not self.frames[rank].presente):
             print("PAGE FAULT")
             i = 0
@@ -33,7 +33,7 @@ class GerenciadorMemoriaVirtual:
 
             if (i < 100):
                 self.mem[i] = self.frames[rank]
-                self.mem[i].PID = processs.PID
+                self.mem[i].PID = PID
                 self.mem[i].age = 0
                 self.mem[i].memPos = i
                 self.mem[i].presente = True
