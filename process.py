@@ -1,8 +1,5 @@
 from random import randint, random
 
-#Whats missing:
-#   - PID
-
 BLOCKED     = 2
 EXECUTING   = 1
 READY       = 0
@@ -40,6 +37,19 @@ class Process:
             self.itime = randint(1, 3) * 3
             self.chance = 0.5
 
+    # Maybe modify this later
+    def begin(self):
+        if self.state == READY:
+            self.state = EXECUTING
+            return True
+
+        if self.state == EXECUTING:
+            return True
+
+        return False
+
+    #Can only preempt if is already executing
+    #Will give an error state otherwise
     def preempt(self):
         self.state = READY
 
@@ -75,20 +85,23 @@ class ControlBlock:
         self.default_priority   = priority
         self.default_quantum    = quantum
 
-    def decrease_priority():
+    def decrease_priority(self):
         self.priority -= 1 
 
-    def decrease_quantum():
+    def decrease_quantum(self):
         self.quantum -= 1
 
-    def reset():
+    def init(self):
+        self.process.begin()
+
+    def reset(self):
         self.priority = self.default_priority
         self.quantum = self.default_quantum
     
-    def get_status():
+    def get_status(self):
         return self.process.get_status()
 
-    def update():
+    def update(self):
         self.process.update()
 
 class ProcessManager:
@@ -109,10 +122,29 @@ class ProcessManager:
 
         self.pbuffer.append(c)
 
+# Data Structure functions (CHANGE THIS)
+    def pop_first_process(self):
+        if self.pbuffer:
+            next = self.pbuffer[0]
+            self.pbuffer.pop(0)
+            
+            return next
+        return False
+
+
 #---------------------------------------------------------------------------------------------------
+# They have to analyze if the pslot will change at all, so they can return the same pslot
 
     def round_robin(self):
-        pass
+        if self.pslot:
+            self.pslot.decrease_quantum()
+
+            if self.pslot.quantum == 0:             # Check if the quantum ended
+                return self.pop_first_process()
+
+        elif self.pbuffer:
+
+        return self.pslot
 
     def round_robin_priority(self):
         pass
@@ -135,7 +167,8 @@ class ProcessManager:
                 'LOTTERY'                   : self.lottery
                 }[self.scheduling_type]
 
-        return sched()
+        self.pslot = sched()
+        self.pslot.init()
 
 #---------------------------------------------------------------------------------------------------
 
