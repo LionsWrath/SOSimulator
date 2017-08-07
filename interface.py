@@ -27,17 +27,26 @@ class ProcessManagement:
         self.time_label.pack(in_=self.tframe)
 
         # Table
-        self.table = Treeview(master, columns=['PID', 'Priority', 'State', 'Type'])
+        self.table = Treeview(master, columns=['PID', 
+            'Priority', 
+            'Quantum',
+            'Tickets',
+            'State', 
+            'Type'])
         self.table.heading('#0', text='PID')
         self.table.heading('#1', text='Priority')
-        self.table.heading('#2', text='State')
-        self.table.heading('#3', text='Type')
-        self.table.heading('#4', text='Frames')
-        self.table.column('#0', stretch=YES)
-        self.table.column('#1', stretch=YES)
-        self.table.column('#2', stretch=YES)
-        self.table.column('#3', stretch=YES)
-        self.table.column('#3', stretch=YES)
+        self.table.heading('#2', text='Quantum')
+        self.table.heading('#3', text='Tickets')
+        self.table.heading('#4', text='State')
+        self.table.heading('#5', text='Type')
+        self.table.heading('#6', text='Frames')
+        self.table.column('#0', stretch=YES, width=50)
+        self.table.column('#1', stretch=YES, width=100)
+        self.table.column('#2', stretch=YES, width=100)
+        self.table.column('#3', stretch=YES, width=100)
+        self.table.column('#4', stretch=YES, width=130)
+        self.table.column('#5', stretch=YES, width=130)
+        self.table.column('#6', stretch=YES, width=100)
         self.table.pack(in_=self.lframe, fill=BOTH, expand=True)
 
         # Lateral Buttons
@@ -81,6 +90,8 @@ class ProcessManagement:
         self.table.insert("", control.PID, text=str(control.PID), 
                 values=(
                     control.priority,
+                    control.quantum,
+                    control.tickets,
                     state,
                     control.process.type,
                     5)) 
