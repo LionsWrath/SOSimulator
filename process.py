@@ -1,4 +1,5 @@
 from random import randint, random
+from gerenciadorMemoria import GerenciadorMemoriaVirtual
 
 BLOCKED     = 2
 EXECUTING   = 1
@@ -23,7 +24,7 @@ class Process:
 
     def generate_times(self):
         if self.type == 'CPU BOUND':
-            self.ptime = randint(1, 3) * 3 
+            self.ptime = randint(1, 3) * 3
             self.itime = randint(1, 3) * 1
             self.chance = 0.1
 
@@ -61,7 +62,7 @@ class Process:
 
         print('\tB PWAIT: ', self.pwait)
         print('\tB IWAIT: ', self.iwait)
-        
+
         if self.state == BLOCKED:
             self.iwait += 1
 
@@ -77,6 +78,8 @@ class Process:
             else:
                 print('\tUPDATING PWAIT')
 
+                self.mem_pos = randint(0, 4)
+
                 # Continue processing
                 self.pwait += 1
 
@@ -91,7 +94,7 @@ class Process:
 
 class ControlBlock:
 
-    def __init__(self, process, PID, priority, quantum, tickets):
+    def __init__(self, process, PID, priority, quantum, tickets, mem_pos):
         self.process            = process
         self.PID                = PID
         self.priority           = priority
@@ -102,8 +105,10 @@ class ControlBlock:
         self.default_quantum    = quantum
         self.default_tickets    = tickets
 
+        self.mem_pos            = mem_pos
+
     def decrease_priority(self):
-        self.priority -= 1 
+        self.priority -= 1
 
     def decrease_quantum(self):
         self.quantum -= 1
@@ -127,13 +132,16 @@ class ControlBlock:
         self.priority = self.default_priority
         self.quantum = self.default_quantum
         self.tickets = self.default_tickets
-    
+
     def get_status(self):
         return self.process.get_status()
 
     def update(self):
         print('PROCESS UPDATE: ', self.PID)
+
         self.process.update()
+
+        self.mem_translate_pos = self.mem_pos * self.process.mem_pos
 
 class ProcessManager:
 
@@ -148,8 +156,13 @@ class ProcessManager:
         self.ibuffer = []
         self.sbuffer = []
 
+        self.last_mem = 0
+        self.free_pos = []
+
         self.time = 0
         self.pid_count = 0
+
+        self.mem = GerenciadorMemoriaVirtual()
 
     def generate_pid(self):
         self.pid_count += 1
@@ -158,8 +171,14 @@ class ProcessManager:
     def add_process(self, type, priority, quantum, tickets):
         PID = self.generate_pid()
 
+        if (len(self.free_pos) > 0):
+            mem = self.free_pos.pop()
+        else:
+            mem = self.last_mem
+            self.last_mem += 1
+
         p = Process(type)
-        c = ControlBlock(p, PID, priority, quantum, tickets)
+        c = ControlBlock(p, PID, priority, quantum, tickets, mem_pos)
 
         self.pbuffer.append(c)
 
@@ -216,7 +235,7 @@ class ProcessManager:
                     self.sbuffer.remove(cb)
                     return True
         return False
-    
+
     def change_scheduling(self, scheduling_type):
         self.scheduling_type = scheduling_type
 
@@ -247,7 +266,7 @@ class ProcessManager:
         if self.pbuffer:
             next = self.pbuffer[0]
             self.pbuffer.pop(0)
-            
+
             return next
         return self.pslot
 
@@ -271,7 +290,7 @@ class ProcessManager:
         if not self.pbuffer:
             return False
 
-        mx = max(self.pbuffer, 
+        mx = max(self.pbuffer,
                 key=lambda x: x.calculate_dynamic())
 
         return mx
@@ -303,7 +322,7 @@ class ProcessManager:
                 self.pbuffer.remove(mx)
                 return mx
 
-            return self.pslot                       
+            return self.pslot
 
         self.pbuffer.remove(mx)
         return mx
@@ -315,7 +334,7 @@ class ProcessManager:
         if self.pslot and mx:
             if mx.priority > self.pslot.priority:
                 self.pbuffer.remove(mx)
-                return mx 
+                return mx
 
             self.pslot.decrease_priority()
             return self.pslot
@@ -333,7 +352,7 @@ class ProcessManager:
         if self.pslot and mx:
             if mx.calculate_dynamic() > self.pslot.calculate_dynamic():
                 self.pbuffer.remove(mx)
-                return mx 
+                return mx
 
             self.pslot.decrease_quantum()
             return self.pslot
@@ -364,7 +383,7 @@ class ProcessManager:
         return self.pslot
 
     def schedule(self):
-        sched = { 
+        sched = {
                 'ROUND ROBIN'               : self.round_robin,
                 'ROUND ROBIN (PRIORITY)'    : self.round_robin_priority,
                 'PRIORITY'                  : self.priority,
@@ -373,7 +392,7 @@ class ProcessManager:
                 }[self.scheduling_type]
 
         next = sched()
-        if not next: 
+        if not next:
             self.pslot = next
             return
 
@@ -396,8 +415,8 @@ class ProcessManager:
     def resolve_executing(self):
         print('RESOLVE EXECUTING')
 
-        s = self.pslot.get_status() 
-        
+        s = self.pslot.get_status()
+
         if s == BLOCKED:
             print('\tFOUND BLOCK')
             self.pslot.reset()
@@ -426,6 +445,8 @@ class ProcessManager:
 
             self.pslot.update()
             self.resolve_executing()
+
+            self.mem.requestMem(self.pslot.processs, self.pslot.mem_translate_pos)
 
         if self.islot:
             # Update pslot
