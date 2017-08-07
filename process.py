@@ -25,17 +25,17 @@ class Process:
         if self.type == 'CPU BOUND':
             self.ptime = randint(1, 3) * 3 
             self.itime = randint(1, 3) * 1
-            self.chance = 0.3
+            self.chance = 0.1
 
         if self.type == 'IO BOUND':
             self.ptime = randint(1, 3) * 1
             self.itime = randint(1, 3) * 3
-            self.chance = 0.7
+            self.chance = 0.3
 
         if self.type == 'CPU&IO BOUND':
             self.ptime = randint(1, 3) * 3
             self.itime = randint(1, 3) * 3
-            self.chance = 0.5
+            self.chance = 0.2
 
     # Maybe modify this later
     def begin(self):
@@ -54,12 +54,29 @@ class Process:
         self.state = READY
 
     def update(self):
+        print('\tSTATE: ', self.state)
+
+        print('\tPTIME: ', self.ptime)
+        print('\tITIME: ', self.itime)
+
+        print('\tB PWAIT: ', self.pwait)
+        print('\tB IWAIT: ', self.iwait)
         
+        if self.state == BLOCKED:
+            self.iwait += 1
+
+            if self.iwait == self.itime:
+                self.iwait = 0
+                self.state = READY
+
         if self.state == EXECUTING:
             # Presents a chance to change to I/O
             if self.draw():
-                self.state == BLOCKED
+                print('\tBLOCKING. . .')
+                self.state = BLOCKED
             else:
+                print('\tUPDATING PWAIT')
+
                 # Continue processing
                 self.pwait += 1
 
@@ -67,12 +84,10 @@ class Process:
                     self.pwait = 0
                     self.state = READY
 
-        if self.state == BLOCKED:
-            self.iwait += 1
+        print('\tSTATE: ', self.state)
 
-            if self.iwait == self.itime:
-                self.iwait = 0
-                self.state = READY
+        print('\tA PWAIT: ', self.pwait)
+        print('\tA IWAIT: ', self.iwait)
 
 class ControlBlock:
 
@@ -102,6 +117,7 @@ class ControlBlock:
         return self.process.get_status()
 
     def update(self):
+        print('PROCESS UPDATE: ', self.PID)
         self.process.update()
 
 class ProcessManager:
@@ -116,35 +132,52 @@ class ProcessManager:
         self.pbuffer = []
         self.ibuffer = []
 
+        self.pid_count = 0
+
+    def generate_pid(self):
+        self.pid_count += 1
+        return self.pid_count
+
     def add_process(self, type, priority, quantum):
-        p = Process(self, type)
-        c = ControlBlock(p, priority, quantum)
+        PID = self.generate_pid()
+
+        p = Process(type)
+        c = ControlBlock(p, PID, priority, quantum)
 
         self.pbuffer.append(c)
 
-# Data Structure functions (CHANGE THIS)
+# Data Structure functions (CHANGE THIS) -----------------------------------------------------------
+
     def pop_first_process(self):
         if self.pbuffer:
             next = self.pbuffer[0]
             self.pbuffer.pop(0)
             
             return next
-        return False
+        return self.pslot
 
+    def pop_first_io(self):
+        if self.ibuffer:
+            next = self.ibuffer[0]
+            self.ibuffer.pop(0)
+
+            return next
+        return self.islot
 
 #---------------------------------------------------------------------------------------------------
 # They have to analyze if the pslot will change at all, so they can return the same pslot
 
     def round_robin(self):
+        print('ROUND ROBIN')
+
         if self.pslot:
             self.pslot.decrease_quantum()
 
             if self.pslot.quantum == 0:             # Check if the quantum ended
+                print('QUANTUM CHANGE')
                 return self.pop_first_process()
-
-        elif self.pbuffer:
-
-        return self.pslot
+            return self.pslot                       # Quantum not ended, continue
+        return self.pop_first_process()             # Not processing, get next
 
     def round_robin_priority(self):
         pass
@@ -168,19 +201,31 @@ class ProcessManager:
                 }[self.scheduling_type]
 
         self.pslot = sched()
-        self.pslot.init()
+        
+        if self.pslot:
+            self.pslot.init()
+
+    def io_set(self):
+        print('SETTING THE IO')
+
+        if not self.islot:
+            self.islot = self.pop_first_io()
 
 #---------------------------------------------------------------------------------------------------
 
     def resolve_executing(self):
+        print('RESOLVE EXECUTING')
+
         s = self.pslot.get_status() 
         
         if s == BLOCKED:
+            print('\tFOUND BLOCK')
             self.pslot.reset()
             self.ibuffer.append(self.pslot)
             self.pslot = False
 
         if s == READY:
+            print('\tFOUND READY')
             self.pslot.reset()
             self.pbuffer.append(self.pslot)
             self.pslot = False
@@ -195,12 +240,17 @@ class ProcessManager:
     def update(self):
         # Update the main processes
         if self.pslot:
+            # Update pslot
+
             self.pslot.update()
             self.resolve_executing()
 
         if self.islot:
+            # Update pslot
+
             self.islot.update()
             self.resolve_blocked()
 
-        schedule()
+        self.schedule()
+        self.io_set()
 
