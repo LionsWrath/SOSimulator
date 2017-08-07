@@ -216,6 +216,9 @@ class ProcessManager:
                     self.sbuffer.remove(cb)
                     return True
         return False
+    
+    def change_scheduling(self, scheduling_type):
+        self.scheduling_type = scheduling_type
 
 # Interface Helper Function ------------------------------------------------------------------------
 
@@ -291,14 +294,19 @@ class ProcessManager:
     def round_robin_priority(self):
         print('ROUND ROBIN (PRIORITY)')
 
+        mx = self.get_highest_priority()
         if self.pslot:
             self.pslot.decrease_quantum()
 
             if self.pslot.quantum == 0:
                 print('QUANTUM CHANGE')
-                return self.get_highest_priority()
+                self.pbuffer.remove(mx)
+                return mx
+
             return self.pslot                       
-        return self.get_highest_priority()
+
+        self.pbuffer.remove(mx)
+        return mx
 
     def priority(self):
         print('PRIORITY')

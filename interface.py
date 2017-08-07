@@ -119,13 +119,15 @@ class ProcessManagement:
         messagebox.showinfo("Alert", "Not possible RESUME that process.")
 
     def configure(self):
-        pass
+        window = ConfigWindow(self.master, self)
 
     # Update Routines
     def update_console(self):
         self.time.set('Tempo: ' + str(self.manager.time))
 
     def update_table(self):
+        p = self.select_item()
+
         self.clear_table()
         ps = self.manager.get_processes()
         ss = self.manager.sbuffer
@@ -135,6 +137,14 @@ class ProcessManagement:
 
         for cb in ss:
             self.add_to_table_s(cb)
+
+        if p['text']:
+            for child in self.table.get_children():
+                item = self.table.item(child)
+                if item['text'] == p['text']:
+                    self.table.focus_set()
+                    self.table.selection_set((child,child))
+                    self.table.focus(child)
 
     def update_all(self):
         self.manager.update()
@@ -230,7 +240,56 @@ class AddWindow(Toplevel):
         if event.widget == self:
             self.master.deiconify()
 
-m = p.ProcessManager(15, 'LOTTERY')
+class ConfigWindow(Toplevel):
+    def __init__(self, master, window):
+        Toplevel.__init__(self, master)
+        self.title("Configuration")
+
+        self.master = master
+        self.master.withdraw()
+        self.bind("<Destroy>", self.on_destroy)
+
+        self.window = window
+
+        # Type of Process
+        self.choices = [
+                'ROUND ROBIN', 
+                'ROUND ROBIN (PRIORITY)', 
+                'PRIORITY',
+                'DYNAMIC PRIORITY',
+                'LOTTERY']
+        self.sched = StringVar(master)
+        self.sched.set(self.window.manager.scheduling_type)
+        self.sched_label = Label(self, text="Type of Scheduling")
+        self.sched_option = OptionMenu(self, self.sched, 
+                self.window.manager.scheduling_type, *self.choices)
+
+        self.sched_label.pack()
+        self.sched_option.pack()
+        self.sched_label.grid(row=0, column=0, sticky=W)
+        self.sched_option.grid(row=0, column=1, sticky=W)
+
+        # Buttons
+        self.ok_button = Button(self, text="Ok", command=self.applyWindow)
+        self.ok_button.pack()
+        self.ok_button.grid(row=1, column=1, sticky=E)
+
+        self.close_button = Button(self, text="Close", command=self.destroy)
+        self.close_button.pack()
+        self.close_button.grid(row=1, column=2, sticky=E)
+        
+        for child in self.winfo_children(): 
+            child.grid_configure(padx=5, pady=5)
+
+    def applyWindow(self):
+        self.window.manager.change_scheduling(self.sched.get())
+        self.destroy()
+
+    def on_destroy(self, event):
+        if event.widget == self:
+            self.master.deiconify()
+
+m = p.ProcessManager(15, 'ROUND ROBIN')
 root = Tk()
 my_gui = ProcessManagement(root, m)
 my_gui.update_all()
