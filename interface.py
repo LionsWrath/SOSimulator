@@ -81,11 +81,13 @@ class ProcessManagement:
                     state,
                     5)) 
 
-    def create_process(self, priority, quantum, type):
-        self.manager.add_process(type, priority, quantum)
+    def create_process(self, priority, quantum, type, tickets):
+        self.manager.add_process(type, priority, quantum, tickets)
 
     def delete_process(self):
-        pass
+        p = self.select_item()
+        if p['text']:
+            self.manager.remove_process(int(p['text']))
 
     def suspend_process(self):
         pass
@@ -151,6 +153,15 @@ class AddWindow(Toplevel):
         self.quantum_label.grid(row=2, column=0, sticky=W)
         self.quantum_spin.grid(row=2, column=1, sticky=W)
 
+        # Tickets
+        self.tickets_label = Label(self, text="Tickets")
+        self.tickets_spin = Spinbox(self, from_=10, to_=100)
+
+        self.tickets_label.pack()
+        self.tickets_spin.pack()
+        self.tickets_label.grid(row=3, column=0, sticky=W)
+        self.tickets_spin.grid(row=3, column=1, sticky=W)
+
         # Type of Process
         self.choices = ['CPU BOUND', 'IO BOUND', 'CPU&IO BOUND']
         self.type = StringVar(master)
@@ -159,17 +170,17 @@ class AddWindow(Toplevel):
 
         self.type_label.pack()
         self.type_option.pack()
-        self.type_label.grid(row=3, column=0, sticky=W)
-        self.type_option.grid(row=3, column=1, sticky=W)
+        self.type_label.grid(row=4, column=0, sticky=W)
+        self.type_option.grid(row=4, column=1, sticky=W)
 
         # Buttons
         self.ok_button = Button(self, text="Ok", command=self.applyWindow)
         self.ok_button.pack()
-        self.ok_button.grid(row=4, column=1, sticky=E)
+        self.ok_button.grid(row=5, column=1, sticky=E)
 
         self.close_button = Button(self, text="Close", command=self.destroy)
         self.close_button.pack()
-        self.close_button.grid(row=4, column=2, sticky=E)
+        self.close_button.grid(row=5, column=2, sticky=E)
         
         for child in self.winfo_children(): 
             child.grid_configure(padx=5, pady=5)
@@ -178,11 +189,13 @@ class AddWindow(Toplevel):
         n_processes     = int(self.number_spin.get())
         priority        = int(self.priority_spin.get())
         quantum         = int(self.quantum_spin.get())
+        tickets         = int(self.tickets_spin.get())
 
         for i in range(n_processes):
             self.window.create_process(priority,
                     quantum,
-                    self.type.get())
+                    self.type.get(),
+                    tickets)
 
         self.destroy()
 
@@ -190,7 +203,7 @@ class AddWindow(Toplevel):
         if event.widget == self:
             self.master.deiconify()
 
-m = p.ProcessManager(15, 'DYNAMIC PRIORITY')
+m = p.ProcessManager(15, 'LOTTERY')
 root = Tk()
 my_gui = ProcessManagement(root, m)
 my_gui.update_all()

@@ -91,20 +91,25 @@ class Process:
 
 class ControlBlock:
 
-    def __init__(self, process, PID, priority, quantum):
+    def __init__(self, process, PID, priority, quantum, tickets):
         self.process            = process
         self.PID                = PID
-        self.quantum            = quantum
         self.priority           = priority
+        self.quantum            = quantum
+        self.tickets            = tickets
 
         self.default_priority   = priority
         self.default_quantum    = quantum
+        self.default_tickets    = tickets
 
     def decrease_priority(self):
         self.priority -= 1 
 
     def decrease_quantum(self):
         self.quantum -= 1
+
+    def decrease_tickets(self):
+        self.tickets -= 1
 
     def calculate_dynamic(self):
         if self.quantum == 0:
@@ -121,6 +126,7 @@ class ControlBlock:
     def reset(self):
         self.priority = self.default_priority
         self.quantum = self.default_quantum
+        self.tickets = self.default_tickets
     
     def get_status(self):
         return self.process.get_status()
@@ -148,13 +154,28 @@ class ProcessManager:
         self.pid_count += 1
         return self.pid_count
 
-    def add_process(self, type, priority, quantum):
+    def add_process(self, type, priority, quantum, tickets):
         PID = self.generate_pid()
 
         p = Process(type)
-        c = ControlBlock(p, PID, priority, quantum)
+        c = ControlBlock(p, PID, priority, quantum, tickets)
 
         self.pbuffer.append(c)
+
+    def remove_process(self, PID):
+        if self.pslot and self.pslot.PID == PID:
+            self.pslot = False
+
+        if self.islot and self.islot.PID == PID:
+            self.islot = False
+
+        for cb in self.pbuffer:
+            if cb.PID == PID:
+                self.pbuffer.remove(cb)
+
+        for cb in self.ibuffer:
+            if cb.PID == PID:
+                self.ibuffer.remove(cb)
 
 # Interface Helper Function ------------------------------------------------------------------------
 
@@ -276,7 +297,20 @@ class ProcessManager:
         return self.pslot
 
     def lottery(self):
-        pass
+        # End one before to give the chance to the last one
+        if self.pbuffer:
+            cumsum = sum((cb.tickets for cb in self.pbuffer))
+            d = randint(1, cumsum)
+
+            s = 0
+            for cb in self.pbuffer:
+                s += cb.tickets
+
+                if s >= d:
+                    cb.decrease_tickets()
+                    self.pbuffer.remove(cb)
+                    return cb
+        return self.pslot
 
     def schedule(self):
         sched = { 
