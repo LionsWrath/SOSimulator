@@ -203,6 +203,11 @@ class ProcessManager:
                 deleted_process = cb
                 self.ibuffer.remove(cb)
 
+        for cb in self.sbuffer:
+            if cb.PID == PID:
+                deleted_process = cb
+                self.sbuffer.remove(cb)
+
         for i in range(deleted_process.mem_pos * 5, deleted_process.mem_pos * 5 + 5):
             self.mem.free_mem(i)
 
@@ -315,7 +320,7 @@ class ProcessManager:
         if self.pslot:
             self.pslot.decrease_quantum()
 
-            if self.pslot.quantum == 0:             # Check if the quantum ended
+            if self.pslot.quantum <= 0:             # Check if the quantum ended
                 print('QUANTUM CHANGE')
                 return self.pop_first_process()
             return self.pslot                       # Quantum not ended, continue
@@ -456,17 +461,16 @@ class ProcessManager:
         # Update the main processes
         if self.pslot:
             # Update pslot
-
             self.pslot.update()
             self.resolve_executing()
 
-
         if self.islot:
             # Update pslot
-
             self.islot.update()
             self.resolve_blocked()
 
         self.schedule()
         self.io_set()
+
+        self.mem.update()
 

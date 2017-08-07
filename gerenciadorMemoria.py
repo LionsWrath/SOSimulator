@@ -13,7 +13,8 @@ class GerenciadorMemoriaVirtual:
         self.mem = [None] * 100
 
     def susbtitute(self, rankNew, PID):
-        substituido = max(filter(lambda x: x.presente, self.frames), key=lambda x: x.age)
+        substituido = max(filter(lambda x: x is not None and x.presente, self.mem), 
+                key=lambda x: x.age)
         substituido.presente = False
 
         self.frames[rankNew].presente = True
@@ -38,7 +39,7 @@ class GerenciadorMemoriaVirtual:
                 self.mem[i].memPos = i
                 self.mem[i].presente = True
             else:
-                self.susbtitute(rankNew, process.PID)
+                self.susbtitute(rank, PID)
 
     def free_mem(self, rank):
         if (self.frames[rank].presente):
@@ -47,5 +48,5 @@ class GerenciadorMemoriaVirtual:
         self.frames[rank].presente = False
 
     def update(self):
-        for frame in filter(lambda x: x.presente, self.frames):
+        for frame in filter(lambda x: x is not None and x.presente, self.mem):
             frame.age += 1
