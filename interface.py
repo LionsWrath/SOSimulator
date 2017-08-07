@@ -1,5 +1,6 @@
 from tkinter import *
 from tkinter.ttk import *
+from tkinter import messagebox
 import process as p
 
 class ProcessManagement:
@@ -26,14 +27,16 @@ class ProcessManagement:
         self.time_label.pack(in_=self.tframe)
 
         # Table
-        self.table = Treeview(master, columns=['PID', 'Priority', 'State'])
+        self.table = Treeview(master, columns=['PID', 'Priority', 'State', 'Type'])
         self.table.heading('#0', text='PID')
         self.table.heading('#1', text='Priority')
         self.table.heading('#2', text='State')
-        self.table.heading('#3', text='Frames')
+        self.table.heading('#3', text='Type')
+        self.table.heading('#4', text='Frames')
         self.table.column('#0', stretch=YES)
         self.table.column('#1', stretch=YES)
         self.table.column('#2', stretch=YES)
+        self.table.column('#3', stretch=YES)
         self.table.column('#3', stretch=YES)
         self.table.pack(in_=self.lframe, fill=BOTH, expand=True)
 
@@ -79,6 +82,16 @@ class ProcessManagement:
                 values=(
                     control.priority,
                     state,
+                    control.process.type,
+                    5)) 
+
+    def add_to_table_s(self, control):
+
+        self.table.insert("", control.PID, text=str(control.PID), 
+                values=(
+                    control.priority,
+                    'SUSPENDED',
+                    control.process.type,
                     5)) 
 
     def create_process(self, priority, quantum, type, tickets):
@@ -90,10 +103,20 @@ class ProcessManagement:
             self.manager.remove_process(int(p['text']))
 
     def suspend_process(self):
-        pass
+        p = self.select_item()
+        if p['text']:
+            res = self.manager.suspend_process(int(p['text']))
+            if res:
+                return
+        messagebox.showinfo("Alert", "Not possible SUSPEND that process.")
     
     def resume_process(self):
-        pass
+        p = self.select_item()
+        if p['text']:
+            res = self.manager.resume_process(int(p['text']))
+            if res:
+                return
+        messagebox.showinfo("Alert", "Not possible RESUME that process.")
 
     def configure(self):
         pass
@@ -105,9 +128,13 @@ class ProcessManagement:
     def update_table(self):
         self.clear_table()
         ps = self.manager.get_processes()
+        ss = self.manager.sbuffer
 
         for cb in ps:
             self.add_to_table(cb)
+
+        for cb in ss:
+            self.add_to_table_s(cb)
 
     def update_all(self):
         self.manager.update()

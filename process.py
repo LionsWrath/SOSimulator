@@ -146,6 +146,7 @@ class ProcessManager:
 
         self.pbuffer = []
         self.ibuffer = []
+        self.sbuffer = []
 
         self.time = 0
         self.pid_count = 0
@@ -176,6 +177,45 @@ class ProcessManager:
         for cb in self.ibuffer:
             if cb.PID == PID:
                 self.ibuffer.remove(cb)
+
+    def suspend_process(self, PID):
+        if self.pslot:
+            if self.pslot.PID == PID:
+                self.pslot.preempt()
+                self.sbuffer.append(self.pslot)
+                self.pslot = False
+                return True
+
+        for cb in self.pbuffer:
+            if cb.PID == PID:
+                self.pbuffer.remove(cb)
+                self.sbuffer.append(cb)
+                return True
+
+        for cb in self.ibuffer:
+            if cb.PID == PID:
+                self.ibuffer.remove(cb)
+                self.sbuffer.append(cb)
+                return True
+
+        return False
+
+    def resume_process(self, PID):
+
+        for cb in self.sbuffer:
+            if cb.PID == PID:
+                s = cb.get_status()
+
+                if s == READY:
+                    self.pbuffer.append(cb)
+                    self.sbuffer.remove(cb)
+                    return True
+
+                if s == BLOCKED:
+                    self.ibuffer.append(cb)
+                    self.sbuffer.remove(cb)
+                    return True
+        return False
 
 # Interface Helper Function ------------------------------------------------------------------------
 
@@ -300,6 +340,9 @@ class ProcessManager:
         # End one before to give the chance to the last one
         if self.pbuffer:
             cumsum = sum((cb.tickets for cb in self.pbuffer))
+            if cumsum <= 1:
+                return self.pslot
+
             d = randint(1, cumsum)
 
             s = 0
