@@ -63,6 +63,10 @@ class ProcessManagement:
     def clear_table(self):
         self.table.delete(*self.table.get_children())
 
+    def select_item(self):
+        cur_item = self.table.focus()
+        return self.table.item(cur_item)
+
     def add_to_table(self, control):
         if control.process.state == p.READY:
             state = 'READY'
